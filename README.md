@@ -1,36 +1,80 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Easy Grocer
 
-## Getting Started
+Easy Grocer is a personal-first progressive web app for meal planning and
+Walmart cart handoff.
 
-First, run the development server:
+This repository currently includes Phase 0 scaffolding:
+
+- Next.js 16 (App Router, TypeScript, Tailwind)
+- Supabase SSR client wiring with `proxy.ts` token refresh flow
+- Serwist service worker pipeline + installable web manifest
+- Offline fallback route at `/~offline`
+- Phase 1 auth/profile foundation (`/login`, `/onboarding/profile`, `/dashboard`)
+- Phase 2 preferences persistence (`/onboarding/preferences`)
+
+## Prerequisites
+
+- Node.js 20+
+- npm 10+
+
+## Environment setup
+
+Copy `.env.example` to `.env.local` and fill in your Supabase values:
+
+```bash
+cp .env.example .env.local
+```
+
+Required values:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_SITE_URL` (defaults to `http://localhost:3000` for local)
+- `SPOONACULAR_API_KEY` (required for live Phase 3 generation; optional fallback to mock data)
+
+## Local development
+
+Start development mode:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This runs both:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `serwist build --watch` (service worker rebuilds)
+- `next dev` (web app)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` - start Next.js + Serwist watcher
+- `npm run dev:once` - build service worker once, then run Next.js
+- `npm run lint` - run ESLint
+- `npm run typecheck` - run TypeScript checks
+- `npm run build` - production build + service worker build
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Current feature routes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `/login` - magic link and Google sign-in
+- `/onboarding/profile` - profile and calorie target setup
+- `/onboarding/preferences` - dietary, fasting, and budget preferences
+- `/dashboard` - saved target overview
 
-## Deploy on Vercel
+## Supabase migrations
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Apply both migrations in order:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. `supabase/migrations/0001_phase1_profiles.sql`
+2. `supabase/migrations/0002_phase2_preferences.sql`
+3. `supabase/migrations/0003_phase3_meal_plans.sql`
+
+## CI
+
+GitHub Actions CI (`.github/workflows/ci.yml`) runs:
+
+1. `npm ci`
+2. `npm run lint`
+3. `npm run typecheck`
+4. `npm run build`
