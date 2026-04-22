@@ -12,6 +12,9 @@ type PlannerInputs = {
   intolerances: string[];
   dislikedIngredients: string[];
   fastingPattern: string | null;
+  mealsPerDay: number;
+  includeSnacks: boolean;
+  snacksPerDay: number;
 };
 
 function normalizeWeekStart(weekStart?: string) {
@@ -39,6 +42,9 @@ export async function getOrCreateWeekPlan(userId: string, weekStart?: string) {
       intolerances: plannerInputs.intolerances,
       dislikedIngredients: plannerInputs.dislikedIngredients,
       fastingPattern: plannerInputs.fastingPattern,
+      mealsPerDay: plannerInputs.mealsPerDay,
+      includeSnacks: plannerInputs.includeSnacks,
+      snacksPerDay: plannerInputs.snacksPerDay,
     });
   } catch {
     generated = getMockWeekPlan(effectiveWeekStart, plannerInputs.budgetCents);
@@ -61,7 +67,7 @@ export async function loadPlannerInputs(userId: string): Promise<PlannerInputs> 
       supabase
         .from("dietary_preferences")
         .select(
-          "weekly_budget_cents,restrictions,intolerances,disliked_ingredients",
+          "weekly_budget_cents,restrictions,intolerances,disliked_ingredients,meals_per_day,include_snacks,snacks_per_day",
         )
         .eq("user_id", userId)
         .maybeSingle(),
@@ -84,6 +90,9 @@ export async function loadPlannerInputs(userId: string): Promise<PlannerInputs> 
     dislikedIngredients:
       (preferences?.disliked_ingredients as string[] | null) ?? [],
     fastingPattern: (fasting?.pattern as string | null) ?? null,
+    mealsPerDay: (preferences?.meals_per_day as number | null) ?? 3,
+    includeSnacks: (preferences?.include_snacks as boolean | null) ?? false,
+    snacksPerDay: (preferences?.snacks_per_day as number | null) ?? 0,
   };
 }
 

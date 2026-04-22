@@ -14,6 +14,9 @@ type PreferenceDraft = {
   likedCuisines: string[];
   dislikedIngredients: string[];
   weeklyBudget: string;
+  mealsPerDay: string;
+  includeSnacks: boolean;
+  snacksPerDay: string;
   fastingPattern: string;
   eatingWindow: string;
 };
@@ -57,6 +60,9 @@ const defaultDraft: PreferenceDraft = {
   likedCuisines: [],
   dislikedIngredients: [],
   weeklyBudget: "",
+  mealsPerDay: "3",
+  includeSnacks: false,
+  snacksPerDay: "1",
   fastingPattern: "",
   eatingWindow: "",
 };
@@ -230,6 +236,7 @@ export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
         name="dislikedIngredients"
         value={JSON.stringify(draft.dislikedIngredients)}
       />
+      <input type="hidden" name="includeSnacks" value={draft.includeSnacks ? "true" : "false"} />
       <input type="hidden" name="eatingWindow" value={eatingWindowValue} />
       <header className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-[0.12em] text-text-secondary">
@@ -316,6 +323,24 @@ export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
           />
         </label>
         <label className="space-y-1 text-sm">
+          <span className="font-medium">Meals per day</span>
+          <select
+            name="mealsPerDay"
+            value={draft.mealsPerDay}
+            onChange={(event) =>
+              setDraft((previous) => ({
+                ...previous,
+                mealsPerDay: (event.target as unknown as { value: string }).value,
+              }))
+            }
+            className="min-h-11 w-full rounded-[10px] border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-focus-ring"
+          >
+            <option value="2">2 meals</option>
+            <option value="3">3 meals</option>
+          </select>
+        </label>
+
+        <label className="space-y-1 text-sm">
           <span className="font-medium">Fasting pattern</span>
           <select
             name="fastingPattern"
@@ -332,6 +357,46 @@ export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
             <option value="16:8">16:8</option>
             <option value="14:10">14:10</option>
             <option value="12:12">12:12</option>
+          </select>
+        </label>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2">
+        <label className="space-y-2 text-sm">
+          <span className="font-medium">Snacks</span>
+          <label className="flex min-h-11 items-center gap-2 rounded-[10px] border border-border px-3 py-2">
+            <input
+              type="checkbox"
+              checked={draft.includeSnacks}
+              onChange={(event) =>
+                setDraft((previous) => ({
+                  ...previous,
+                  includeSnacks: Boolean((event.target as unknown as { checked: boolean }).checked),
+                }))
+              }
+            />
+            <span>Include snacks in my meal plan</span>
+          </label>
+        </label>
+
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">Snacks per day</span>
+          <select
+            name="snacksPerDay"
+            value={draft.snacksPerDay}
+            disabled={!draft.includeSnacks}
+            onChange={(event) =>
+              setDraft((previous) => ({
+                ...previous,
+                snacksPerDay: (event.target as unknown as { value: string }).value,
+              }))
+            }
+            className="min-h-11 w-full rounded-[10px] border border-border bg-background px-3 py-2 outline-none disabled:opacity-60 focus:ring-2 focus:ring-focus-ring"
+          >
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
           </select>
         </label>
       </section>

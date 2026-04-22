@@ -19,7 +19,7 @@ export default async function OnboardingPreferencesPage() {
       supabase
         .from("dietary_preferences")
         .select(
-          "restrictions,intolerances,liked_cuisines,disliked_ingredients,weekly_budget_cents",
+          "restrictions,intolerances,liked_cuisines,disliked_ingredients,weekly_budget_cents,meals_per_day,include_snacks,snacks_per_day",
         )
         .eq("user_id", user.id)
         .maybeSingle(),
@@ -51,6 +51,9 @@ export default async function OnboardingPreferencesPage() {
     weeklyBudget: dietary?.weekly_budget_cents
       ? String(dietary.weekly_budget_cents / 100)
       : "",
+    mealsPerDay: dietary?.meals_per_day ? String(dietary.meals_per_day) : "3",
+    includeSnacks: Boolean(dietary?.include_snacks),
+    snacksPerDay: dietary?.snacks_per_day ? String(dietary.snacks_per_day) : "1",
     fastingPattern: fasting?.pattern ?? "",
     eatingWindow,
   };

@@ -30,6 +30,12 @@ const preferencesSchema = z.object({
   likedCuisines: arrayField,
   dislikedIngredients: arrayField,
   weeklyBudget: z.coerce.number().min(0).max(5000).optional().default(0),
+  mealsPerDay: z.coerce.number().int().min(2).max(3).default(3),
+  includeSnacks: z
+    .string()
+    .optional()
+    .transform((value) => value === "true"),
+  snacksPerDay: z.coerce.number().int().min(0).max(3).default(0),
   fastingPattern: z.string().trim().max(30).optional().default(""),
   eatingWindow: z.string().trim().max(30).optional().default(""),
 });
@@ -83,6 +89,9 @@ export async function savePreferences(
       likedCuisines: formData.get("likedCuisines"),
       dislikedIngredients: formData.get("dislikedIngredients"),
       weeklyBudget: formData.get("weeklyBudget"),
+      mealsPerDay: formData.get("mealsPerDay"),
+      includeSnacks: formData.get("includeSnacks"),
+      snacksPerDay: formData.get("snacksPerDay"),
       fastingPattern: formData.get("fastingPattern"),
       eatingWindow: formData.get("eatingWindow"),
     });
@@ -98,6 +107,9 @@ export async function savePreferences(
     const supabase = await createClient();
     const now = new Date().toISOString();
     const weeklyBudgetCents = Math.round(data.weeklyBudget * 100);
+    const normalizedSnacksPerDay = data.includeSnacks
+      ? Math.min(data.snacksPerDay, 3)
+      : 0;
 
     const { error: preferencesError } = await supabase
       .from("dietary_preferences")
@@ -108,6 +120,9 @@ export async function savePreferences(
         liked_cuisines: data.likedCuisines,
         disliked_ingredients: data.dislikedIngredients,
         weekly_budget_cents: weeklyBudgetCents,
+        meals_per_day: data.mealsPerDay,
+        include_snacks: data.includeSnacks,
+        snacks_per_day: normalizedSnacksPerDay,
         updated_at: now,
       });
 
