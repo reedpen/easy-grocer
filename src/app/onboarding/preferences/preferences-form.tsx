@@ -22,7 +22,34 @@ const STORAGE_KEY = "easy-grocer-preferences-draft";
 
 const restrictionOptions = ["Vegan", "Vegetarian", "Gluten-free", "Dairy-free", "Halal"];
 const intoleranceOptions = ["Lactose", "Peanuts", "Tree nuts", "Shellfish", "Soy"];
-const cuisineOptions = ["Mediterranean", "Mexican", "Indian", "Japanese", "American"];
+const cuisineOptions = [
+  "American",
+  "Mediterranean",
+  "Mexican",
+  "Indian",
+  "Japanese",
+  "Korean",
+  "Chinese",
+  "Thai",
+  "Vietnamese",
+  "Middle Eastern",
+  "Greek",
+  "Italian",
+  "French",
+  "Spanish",
+  "Caribbean",
+  "Brazilian",
+  "Peruvian",
+  "Turkish",
+  "Lebanese",
+  "Ethiopian",
+];
+
+const timeOptions = Array.from({ length: 48 }, (_, index) => {
+  const hour = Math.floor(index / 2);
+  const minute = index % 2 === 0 ? "00" : "30";
+  return `${String(hour).padStart(2, "0")}:${minute}`;
+});
 
 const defaultDraft: PreferenceDraft = {
   restrictions: [],
@@ -62,6 +89,19 @@ function loadStoredDraft(): PreferenceDraft {
     browser.sessionStorage.removeItem(STORAGE_KEY);
     return defaultDraft;
   }
+}
+
+function parseEatingWindow(value: string) {
+  if (!value) {
+    return { start: "", end: "" };
+  }
+  const normalized = value.replace(/\s+/g, "");
+  const [start, end] = normalized.split("-");
+  const hhmm = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+  if (!start || !end || !hhmm.test(start) || !hhmm.test(end)) {
+    return { start: "", end: "" };
+  }
+  return { start, end };
 }
 
 function ChipGroup({
@@ -106,32 +146,53 @@ function ChipGroup({
 const initialActionState: PreferencesActionState = { status: "idle" };
 
 export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
+  const [initialState] = useState(() => {
+    const mergedDraft: PreferenceDraft = {
+      ...loadStoredDraft(),
+      ...initialDraft,
+    };
+    const parsedWindow = parseEatingWindow(mergedDraft.eatingWindow);
+    return {
+      draft: mergedDraft,
+      windowStart: parsedWindow.start,
+      windowEnd: parsedWindow.end,
+    };
+  });
   const [actionState, formAction, isPending] = useActionState(
     savePreferences,
     initialActionState,
   );
-  const [draft, setDraft] = useState<PreferenceDraft>(() => ({
-    ...loadStoredDraft(),
-    ...initialDraft,
-  }));
+  const [draft, setDraft] = useState<PreferenceDraft>(initialState.draft);
   const [dislikedInput, setDislikedInput] = useState("");
+  const [windowStart, setWindowStart] = useState(initialState.windowStart);
+  const [windowEnd, setWindowEnd] = useState(initialState.windowEnd);
+  const eatingWindowValue =
+    windowStart && windowEnd && windowStart < windowEnd
+      ? `${windowStart} - ${windowEnd}`
+      : "";
 
   useEffect(() => {
     if (!browser.sessionStorage) {
       return;
     }
-    browser.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
-  }, [draft]);
+    browser.sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...draft, eatingWindow: eatingWindowValue }),
+    );
+  }, [draft, eatingWindowValue]);
 
   const validationHint = useMemo(() => {
     if (!draft.weeklyBudget) {
       return "Add a weekly budget to personalize grocery cost alerts.";
     }
-    if (!draft.eatingWindow) {
+    if (!windowStart || !windowEnd) {
       return "Include an eating window so snack timing can adapt.";
     }
+    if (windowStart >= windowEnd) {
+      return "Choose an end time that is later than your start time.";
+    }
     return "Looks good. You can edit these anytime in settings.";
-  }, [draft.eatingWindow, draft.weeklyBudget]);
+  }, [draft.weeklyBudget, windowEnd, windowStart]);
 
   function toggleValue(field: "restrictions" | "intolerances" | "likedCuisines", value: string) {
     setDraft((previous) => ({
@@ -169,6 +230,7 @@ export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
         name="dislikedIngredients"
         value={JSON.stringify(draft.dislikedIngredients)}
       />
+      <input type="hidden" name="eatingWindow" value={eatingWindowValue} />
       <header className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-[0.12em] text-text-secondary">
           Step 2 of 2
@@ -276,18 +338,36 @@ export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
 
       <label className="space-y-1 text-sm">
         <span className="font-medium">Eating window</span>
-        <input
-          name="eatingWindow"
-          value={draft.eatingWindow}
-          onChange={(event) =>
-            setDraft((previous) => ({
-              ...previous,
-              eatingWindow: (event.target as unknown as { value: string }).value,
-            }))
-          }
-          className="min-h-11 w-full rounded-[10px] border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-focus-ring"
-          placeholder="10:00 - 18:00"
-        />
+        <div className="grid gap-2 sm:grid-cols-2">
+          <select
+            value={windowStart}
+            onChange={(event) =>
+              setWindowStart((event.target as unknown as { value: string }).value)
+            }
+            className="min-h-11 w-full rounded-[10px] border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-focus-ring"
+          >
+            <option value="">Start time</option>
+            {timeOptions.map((time) => (
+              <option key={`start-${time}`} value={time}>
+                {time}
+              </option>
+            ))}
+          </select>
+          <select
+            value={windowEnd}
+            onChange={(event) =>
+              setWindowEnd((event.target as unknown as { value: string }).value)
+            }
+            className="min-h-11 w-full rounded-[10px] border border-border bg-background px-3 py-2 outline-none focus:ring-2 focus:ring-focus-ring"
+          >
+            <option value="">End time</option>
+            {timeOptions.map((time) => (
+              <option key={`end-${time}`} value={time}>
+                {time}
+              </option>
+            ))}
+          </select>
+        </div>
       </label>
 
       <footer className="sticky bottom-3 space-y-2 rounded-xl border border-border bg-background/95 p-3 backdrop-blur">
