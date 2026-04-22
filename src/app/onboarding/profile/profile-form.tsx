@@ -9,8 +9,13 @@ const initialState: ProfileActionState = { status: "idle" };
 const STORAGE_KEY = "easy-grocer-profile-draft";
 type ProfileDraft = {
   age: string;
+  heightUnit: "cm" | "ft_in";
   heightCm: string;
+  heightFeet: string;
+  heightInches: string;
+  weightUnit: "kg" | "lb";
   weightKg: string;
+  weightLb: string;
   sex: string;
   activityLevel: string;
   goal: string;
@@ -42,8 +47,13 @@ const goalOptions = [
 function loadStoredDraft(): ProfileDraft {
   const fallback: ProfileDraft = {
     age: "",
+    heightUnit: "cm",
     heightCm: "",
+    heightFeet: "",
+    heightInches: "",
+    weightUnit: "kg",
     weightKg: "",
+    weightLb: "",
     sex: "male",
     activityLevel: "moderate",
     goal: "maintenance",
@@ -70,8 +80,17 @@ export function ProfileForm() {
   const [storedDraft] = useState(loadStoredDraft);
   const [state, action, isPending] = useActionState(saveProfile, initialState);
   const [age, setAge] = useState(storedDraft.age);
+  const [heightUnit, setHeightUnit] = useState<ProfileDraft["heightUnit"]>(
+    storedDraft.heightUnit,
+  );
   const [heightCm, setHeightCm] = useState(storedDraft.heightCm);
+  const [heightFeet, setHeightFeet] = useState(storedDraft.heightFeet);
+  const [heightInches, setHeightInches] = useState(storedDraft.heightInches);
+  const [weightUnit, setWeightUnit] = useState<ProfileDraft["weightUnit"]>(
+    storedDraft.weightUnit,
+  );
   const [weightKg, setWeightKg] = useState(storedDraft.weightKg);
+  const [weightLb, setWeightLb] = useState(storedDraft.weightLb);
   const [sex, setSex] = useState(storedDraft.sex);
   const [activityLevel, setActivityLevel] = useState(storedDraft.activityLevel);
   const [goal, setGoal] = useState(storedDraft.goal);
@@ -84,27 +103,69 @@ export function ProfileForm() {
       STORAGE_KEY,
       JSON.stringify({
         age,
+        heightUnit,
         heightCm,
+        heightFeet,
+        heightInches,
+        weightUnit,
         weightKg,
+        weightLb,
         sex,
         activityLevel,
         goal,
       }),
     );
-  }, [activityLevel, age, goal, heightCm, sex, weightKg]);
+  }, [
+    activityLevel,
+    age,
+    goal,
+    heightCm,
+    heightFeet,
+    heightInches,
+    heightUnit,
+    sex,
+    weightKg,
+    weightLb,
+    weightUnit,
+  ]);
 
   const validationHint = useMemo(() => {
-    if (!heightCm || Number(heightCm) < 120 || Number(heightCm) > 250) {
-      return "Height must be between 120 and 250 cm.";
+    const normalizedHeightCm =
+      heightUnit === "cm"
+        ? Number(heightCm)
+        : (Number(heightFeet) * 12 + Number(heightInches)) * 2.54;
+    if (
+      !normalizedHeightCm ||
+      Number.isNaN(normalizedHeightCm) ||
+      normalizedHeightCm < 120 ||
+      normalizedHeightCm > 250
+    ) {
+      return "Height must be between 120 and 250 cm (about 3'11\" to 8'2\").";
     }
-    if (!weightKg || Number(weightKg) < 35 || Number(weightKg) > 300) {
-      return "Weight must be between 35 and 300 kg.";
+    const normalizedWeightKg =
+      weightUnit === "kg" ? Number(weightKg) : Number(weightLb) * 0.45359237;
+    if (
+      !normalizedWeightKg ||
+      Number.isNaN(normalizedWeightKg) ||
+      normalizedWeightKg < 35 ||
+      normalizedWeightKg > 300
+    ) {
+      return "Weight must be between 35 and 300 kg (about 77 to 661 lb).";
     }
     if (!age || Number(age) < 15 || Number(age) > 100) {
       return "Age must be between 15 and 100 years.";
     }
     return "Looks good. Continue to preference setup.";
-  }, [age, heightCm, weightKg]);
+  }, [
+    age,
+    heightCm,
+    heightFeet,
+    heightInches,
+    heightUnit,
+    weightKg,
+    weightLb,
+    weightUnit,
+  ]);
 
   function handleSubmit(formData: FormData) {
     if (browser.sessionStorage) {
@@ -112,8 +173,13 @@ export function ProfileForm() {
         STORAGE_KEY,
         JSON.stringify({
           age,
+          heightUnit,
           heightCm,
+          heightFeet,
+          heightInches,
+          weightUnit,
           weightKg,
+          weightLb,
           sex,
           activityLevel,
           goal,
@@ -136,38 +202,145 @@ export function ProfileForm() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium">Height (cm)</span>
-          <input
-            name="heightCm"
-            type="number"
-            min={120}
-            max={250}
-            required
-            value={heightCm}
-            onChange={(event) =>
-              setHeightCm((event.target as unknown as { value: string }).value)
-            }
-            className="w-full rounded-[10px] border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-focus-ring"
-          />
-        </label>
+        <fieldset className="space-y-2 text-sm">
+          <legend className="font-medium">Height</legend>
+          <div className="flex gap-2">
+            <label className="flex items-center gap-2 rounded-[10px] border border-border px-3 py-2">
+              <input
+                type="radio"
+                name="heightUnit"
+                value="cm"
+                checked={heightUnit === "cm"}
+                onChange={(event) =>
+                  setHeightUnit(
+                    (event.target as unknown as { value: ProfileDraft["heightUnit"] }).value,
+                  )
+                }
+              />
+              <span>cm</span>
+            </label>
+            <label className="flex items-center gap-2 rounded-[10px] border border-border px-3 py-2">
+              <input
+                type="radio"
+                name="heightUnit"
+                value="ft_in"
+                checked={heightUnit === "ft_in"}
+                onChange={(event) =>
+                  setHeightUnit(
+                    (event.target as unknown as { value: ProfileDraft["heightUnit"] }).value,
+                  )
+                }
+              />
+              <span>ft/in</span>
+            </label>
+          </div>
+          {heightUnit === "cm" ? (
+            <input
+              name="heightCm"
+              type="number"
+              min={120}
+              max={250}
+              required
+              value={heightCm}
+              onChange={(event) =>
+                setHeightCm((event.target as unknown as { value: string }).value)
+              }
+              className="w-full rounded-[10px] border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-focus-ring"
+            />
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                name="heightFeet"
+                type="number"
+                min={3}
+                max={8}
+                required
+                value={heightFeet}
+                onChange={(event) =>
+                  setHeightFeet((event.target as unknown as { value: string }).value)
+                }
+                className="w-full rounded-[10px] border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-focus-ring"
+                placeholder="feet"
+              />
+              <input
+                name="heightInches"
+                type="number"
+                min={0}
+                max={11}
+                required
+                value={heightInches}
+                onChange={(event) =>
+                  setHeightInches((event.target as unknown as { value: string }).value)
+                }
+                className="w-full rounded-[10px] border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-focus-ring"
+                placeholder="inches"
+              />
+            </div>
+          )}
+        </fieldset>
 
-        <label className="space-y-1 text-sm">
-          <span className="font-medium">Weight (kg)</span>
-          <input
-            name="weightKg"
-            type="number"
-            min={35}
-            max={300}
-            step="0.1"
-            required
-            value={weightKg}
-            onChange={(event) =>
-              setWeightKg((event.target as unknown as { value: string }).value)
-            }
-            className="w-full rounded-[10px] border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-focus-ring"
-          />
-        </label>
+        <fieldset className="space-y-2 text-sm">
+          <legend className="font-medium">Weight</legend>
+          <div className="flex gap-2">
+            <label className="flex items-center gap-2 rounded-[10px] border border-border px-3 py-2">
+              <input
+                type="radio"
+                name="weightUnit"
+                value="kg"
+                checked={weightUnit === "kg"}
+                onChange={(event) =>
+                  setWeightUnit(
+                    (event.target as unknown as { value: ProfileDraft["weightUnit"] }).value,
+                  )
+                }
+              />
+              <span>kg</span>
+            </label>
+            <label className="flex items-center gap-2 rounded-[10px] border border-border px-3 py-2">
+              <input
+                type="radio"
+                name="weightUnit"
+                value="lb"
+                checked={weightUnit === "lb"}
+                onChange={(event) =>
+                  setWeightUnit(
+                    (event.target as unknown as { value: ProfileDraft["weightUnit"] }).value,
+                  )
+                }
+              />
+              <span>lb</span>
+            </label>
+          </div>
+          {weightUnit === "kg" ? (
+            <input
+              name="weightKg"
+              type="number"
+              min={35}
+              max={300}
+              step="0.1"
+              required
+              value={weightKg}
+              onChange={(event) =>
+                setWeightKg((event.target as unknown as { value: string }).value)
+              }
+              className="w-full rounded-[10px] border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-focus-ring"
+            />
+          ) : (
+            <input
+              name="weightLb"
+              type="number"
+              min={77}
+              max={661}
+              step="0.1"
+              required
+              value={weightLb}
+              onChange={(event) =>
+                setWeightLb((event.target as unknown as { value: string }).value)
+              }
+              className="w-full rounded-[10px] border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-focus-ring"
+            />
+          )}
+        </fieldset>
 
         <label className="space-y-1 text-sm">
           <span className="font-medium">Age</span>

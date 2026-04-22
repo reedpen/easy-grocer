@@ -13,8 +13,13 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 const profileSchema = z.object({
-  heightCm: z.coerce.number().min(120).max(250),
-  weightKg: z.coerce.number().min(35).max(300),
+  heightUnit: z.enum(["cm", "ft_in"]),
+  heightCm: z.string().optional().default(""),
+  heightFeet: z.string().optional().default(""),
+  heightInches: z.string().optional().default(""),
+  weightUnit: z.enum(["kg", "lb"]),
+  weightKg: z.string().optional().default(""),
+  weightLb: z.string().optional().default(""),
   age: z.coerce.number().int().min(15).max(100),
   sex: z.enum(["male", "female"]),
   activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"]),
@@ -27,6 +32,60 @@ export type ProfileActionState = {
 };
 
 const defaultState: ProfileActionState = { status: "idle" };
+
+function parsePositiveNumber(value: string) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return parsed;
+}
+
+function normalizeMetricInputs(payload: z.infer<typeof profileSchema>) {
+  let heightCm: number | null = null;
+  if (payload.heightUnit === "cm") {
+    heightCm = parsePositiveNumber(payload.heightCm);
+  } else {
+    const feet = parsePositiveNumber(payload.heightFeet);
+    const rawInches = payload.heightInches.trim();
+    const inches = rawInches ? Number(rawInches) : 0;
+    if (
+      feet === null ||
+      !Number.isFinite(inches) ||
+      inches < 0 ||
+      inches >= 12
+    ) {
+      return { error: "Enter a valid height in feet and inches." } as const;
+    }
+    heightCm = (feet * 12 + inches) * 2.54;
+  }
+
+  if (heightCm === null || heightCm < 120 || heightCm > 250) {
+    return {
+      error: "Height must be between 120 and 250 cm (about 3'11\" to 8'2\").",
+    } as const;
+  }
+
+  let weightKg: number | null = null;
+  if (payload.weightUnit === "kg") {
+    weightKg = parsePositiveNumber(payload.weightKg);
+  } else {
+    const weightLb = parsePositiveNumber(payload.weightLb);
+    if (weightLb === null) {
+      return { error: "Enter a valid weight in pounds." } as const;
+    }
+    weightKg = weightLb * 0.45359237;
+  }
+
+  if (weightKg === null || weightKg < 35 || weightKg > 300) {
+    return {
+      error: "Weight must be between 35 and 300 kg (about 77 to 661 lb).",
+    } as const;
+  }
+
+  return {
+    heightCm: Math.round(heightCm * 10) / 10,
+    weightKg: Math.round(weightKg * 10) / 10,
+  } as const;
+}
 
 export async function saveProfile(
   previous: ProfileActionState = defaultState,
@@ -44,8 +103,13 @@ export async function saveProfile(
     void previous;
     const user = await requireUser();
     const parsed = profileSchema.safeParse({
+      heightUnit: formData.get("heightUnit"),
       heightCm: formData.get("heightCm"),
+      heightFeet: formData.get("heightFeet"),
+      heightInches: formData.get("heightInches"),
+      weightUnit: formData.get("weightUnit"),
       weightKg: formData.get("weightKg"),
+      weightLb: formData.get("weightLb"),
       age: formData.get("age"),
       sex: formData.get("sex"),
       activityLevel: formData.get("activityLevel"),
@@ -60,9 +124,17 @@ export async function saveProfile(
     }
 
     const payload = parsed.data;
+    const normalized = normalizeMetricInputs(payload);
+    if ("error" in normalized) {
+      return {
+        status: "error",
+        message: normalized.error,
+      };
+    }
+
     const targets = calculateNutritionTargets({
-      weightKg: payload.weightKg,
-      heightCm: payload.heightCm,
+      weightKg: normalized.weightKg,
+      heightCm: normalized.heightCm,
       age: payload.age,
       sex: payload.sex as BiologicalSex,
       activityLevel: payload.activityLevel as ActivityLevel,
@@ -72,8 +144,8 @@ export async function saveProfile(
     const supabase = await createClient();
     const { error } = await supabase.from("profiles").upsert({
       user_id: user.id,
-      height_cm: payload.heightCm,
-      weight_kg: payload.weightKg,
+      height_cm: normalized.heightCm,
+      weight_kg: normalized.weightKg,
       age: payload.age,
       sex: payload.sex,
       activity_level: payload.activityLevel,
