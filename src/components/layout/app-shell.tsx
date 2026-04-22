@@ -12,6 +12,7 @@ const navItems: NavItem[] = [
   { href: "/plan/current-week", label: "Plan" },
   { href: "/cart", label: "Cart" },
   { href: "/history", label: "History" },
+  { href: "/settings", label: "Settings" },
 ];
 
 type AppShellProps = {
@@ -38,7 +39,7 @@ export function AppShell({
           </Link>
           <p className="hidden text-sm text-text-secondary md:block">{weekLabel}</p>
           <Link
-            href="/onboarding/profile"
+            href="/settings"
             className="rounded-full border border-border px-3 py-1.5 text-sm font-medium hover:bg-surface-strong"
           >
             Profile
@@ -64,7 +65,7 @@ export function AppShell({
             </nav>
             <div className="mt-auto space-y-1 pt-6">
               <Link
-                href="/onboarding/profile"
+                href="/settings"
                 className="block rounded-[10px] px-3 py-2 text-sm font-medium text-text-secondary transition hover:bg-surface-strong hover:text-foreground"
               >
                 Settings
@@ -84,7 +85,7 @@ export function AppShell({
       </div>
       {withNavigation ? (
         <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 p-2 backdrop-blur md:hidden">
-          <ul className="mx-auto grid max-w-[1200px] grid-cols-4 gap-2">
+          <ul className="mx-auto grid max-w-[1200px] grid-cols-5 gap-2">
             {navItems.map((item) => (
               <li key={item.href}>
                 <Link

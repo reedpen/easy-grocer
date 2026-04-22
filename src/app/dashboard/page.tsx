@@ -113,6 +113,9 @@ export default async function DashboardPage() {
             <Link href="/cart">
               <PrimaryActionButton variant="secondary">Review groceries</PrimaryActionButton>
             </Link>
+            <Link href="/settings">
+              <PrimaryActionButton variant="secondary">Edit settings</PrimaryActionButton>
+            </Link>
           </div>
         </div>
       </section>

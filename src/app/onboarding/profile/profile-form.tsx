@@ -76,24 +76,47 @@ function loadStoredDraft(): ProfileDraft {
   }
 }
 
-export function ProfileForm() {
+type ProfileFormProps = {
+  initialDraft?: Partial<ProfileDraft>;
+  redirectTo?: string;
+  stepLabel?: string;
+  title?: string;
+  description?: string;
+  submitLabel?: string;
+};
+
+export function ProfileForm({
+  initialDraft,
+  redirectTo = "/onboarding/preferences",
+  stepLabel = "Step 1 of 2",
+  title = "Set your profile targets",
+  description = "These values drive your calorie and macro targets.",
+  submitLabel = "Continue",
+}: ProfileFormProps = {}) {
   const [storedDraft] = useState(loadStoredDraft);
+  const mergedDraft = useMemo(
+    () => ({
+      ...storedDraft,
+      ...initialDraft,
+    }),
+    [initialDraft, storedDraft],
+  );
   const [state, action, isPending] = useActionState(saveProfile, initialState);
-  const [age, setAge] = useState(storedDraft.age);
+  const [age, setAge] = useState(mergedDraft.age);
   const [heightUnit, setHeightUnit] = useState<ProfileDraft["heightUnit"]>(
-    storedDraft.heightUnit,
+    mergedDraft.heightUnit,
   );
-  const [heightCm, setHeightCm] = useState(storedDraft.heightCm);
-  const [heightFeet, setHeightFeet] = useState(storedDraft.heightFeet);
-  const [heightInches, setHeightInches] = useState(storedDraft.heightInches);
+  const [heightCm, setHeightCm] = useState(mergedDraft.heightCm);
+  const [heightFeet, setHeightFeet] = useState(mergedDraft.heightFeet);
+  const [heightInches, setHeightInches] = useState(mergedDraft.heightInches);
   const [weightUnit, setWeightUnit] = useState<ProfileDraft["weightUnit"]>(
-    storedDraft.weightUnit,
+    mergedDraft.weightUnit,
   );
-  const [weightKg, setWeightKg] = useState(storedDraft.weightKg);
-  const [weightLb, setWeightLb] = useState(storedDraft.weightLb);
-  const [sex, setSex] = useState(storedDraft.sex);
-  const [activityLevel, setActivityLevel] = useState(storedDraft.activityLevel);
-  const [goal, setGoal] = useState(storedDraft.goal);
+  const [weightKg, setWeightKg] = useState(mergedDraft.weightKg);
+  const [weightLb, setWeightLb] = useState(mergedDraft.weightLb);
+  const [sex, setSex] = useState(mergedDraft.sex);
+  const [activityLevel, setActivityLevel] = useState(mergedDraft.activityLevel);
+  const [goal, setGoal] = useState(mergedDraft.goal);
 
   useEffect(() => {
     if (!browser.sessionStorage) {
@@ -191,13 +214,14 @@ export function ProfileForm() {
 
   return (
     <form action={handleSubmit} className="eg-card space-y-5 p-6">
+      <input type="hidden" name="redirectTo" value={redirectTo} />
       <div className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-[0.12em] text-text-secondary">
-          Step 1 of 2
+          {stepLabel}
         </p>
-        <h1 className="text-2xl font-semibold">Set your profile targets</h1>
+        <h1 className="text-2xl font-semibold">{title}</h1>
         <p className="text-sm text-text-secondary">
-          These values drive your calorie and macro targets.
+          {description}
         </p>
       </div>
 
@@ -415,13 +439,15 @@ export function ProfileForm() {
 
       <footer className="sticky bottom-3 space-y-2 rounded-xl border border-border bg-background/95 p-3 backdrop-blur">
         <PrimaryActionButton type="submit" disabled={isPending} className="w-full">
-          {isPending ? "Saving..." : "Continue"}
+          {isPending ? "Saving..." : submitLabel}
         </PrimaryActionButton>
         <p className="text-xs text-text-secondary">{validationHint}</p>
       </footer>
 
-      {state.status === "error" && state.message ? (
-        <p className="text-sm text-red-600">{state.message}</p>
+      {state.status !== "idle" && state.message ? (
+        <p className={`text-sm ${state.status === "error" ? "text-red-600" : "text-emerald-600"}`}>
+          {state.message}
+        </p>
       ) : null}
     </form>
   );

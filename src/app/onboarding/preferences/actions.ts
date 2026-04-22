@@ -38,6 +38,7 @@ const preferencesSchema = z.object({
   snacksPerDay: z.coerce.number().int().min(0).max(3).default(0),
   fastingPattern: z.string().trim().max(30).optional().default(""),
   eatingWindow: z.string().trim().max(30).optional().default(""),
+  redirectTo: z.string().optional().default(""),
 });
 
 export type PreferencesActionState = {
@@ -67,6 +68,13 @@ function parseEatingWindow(window: string) {
   return { start: normalizeHour(start), end: normalizeHour(end) };
 }
 
+function sanitizeNextPath(candidate: string) {
+  if (!candidate) return "/dashboard";
+  if (!candidate.startsWith("/")) return "/dashboard";
+  if (candidate.startsWith("//")) return "/dashboard";
+  return candidate;
+}
+
 export async function savePreferences(
   previous: PreferencesActionState = defaultState,
   formData: FormData,
@@ -94,6 +102,7 @@ export async function savePreferences(
       snacksPerDay: formData.get("snacksPerDay"),
       fastingPattern: formData.get("fastingPattern"),
       eatingWindow: formData.get("eatingWindow"),
+      redirectTo: formData.get("redirectTo"),
     });
 
     if (!parsed.success) {
@@ -148,7 +157,8 @@ export async function savePreferences(
       return { status: "error", message: fastingError.message };
     }
 
-    redirect("/dashboard");
+    const nextPath = sanitizeNextPath(data.redirectTo);
+    redirect(nextPath);
   } catch {
     return {
       status: "error",

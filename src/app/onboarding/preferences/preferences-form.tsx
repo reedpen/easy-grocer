@@ -69,6 +69,10 @@ const defaultDraft: PreferenceDraft = {
 
 type PreferencesFormProps = {
   initialDraft?: Partial<PreferenceDraft>;
+  redirectTo?: string;
+  stepLabel?: string;
+  title?: string;
+  submitLabel?: string;
 };
 
 const browser = globalThis as {
@@ -151,7 +155,13 @@ function ChipGroup({
 
 const initialActionState: PreferencesActionState = { status: "idle" };
 
-export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
+export function PreferencesForm({
+  initialDraft,
+  redirectTo = "/dashboard",
+  stepLabel = "Step 2 of 2",
+  title = "Set your food preferences",
+  submitLabel = "Save preferences",
+}: PreferencesFormProps) {
   const [initialState] = useState(() => {
     const mergedDraft: PreferenceDraft = {
       ...loadStoredDraft(),
@@ -238,11 +248,12 @@ export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
       />
       <input type="hidden" name="includeSnacks" value={draft.includeSnacks ? "true" : "false"} />
       <input type="hidden" name="eatingWindow" value={eatingWindowValue} />
+      <input type="hidden" name="redirectTo" value={redirectTo} />
       <header className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-[0.12em] text-text-secondary">
-          Step 2 of 2
+          {stepLabel}
         </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Set your food preferences</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
       </header>
 
       <ChipGroup
@@ -437,7 +448,7 @@ export function PreferencesForm({ initialDraft }: PreferencesFormProps) {
 
       <footer className="sticky bottom-3 space-y-2 rounded-xl border border-border bg-background/95 p-3 backdrop-blur">
         <PrimaryActionButton type="submit" className="w-full" disabled={isPending}>
-          {isPending ? "Saving..." : "Save preferences"}
+          {isPending ? "Saving..." : submitLabel}
         </PrimaryActionButton>
         <p className="text-xs text-text-secondary">{validationHint}</p>
         {actionState.status === "error" && actionState.message ? (

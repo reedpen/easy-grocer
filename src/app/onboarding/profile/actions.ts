@@ -28,10 +28,11 @@ const profileSchema = z.object({
   sex: z.enum(["male", "female"]),
   activityLevel: z.enum(["sedentary", "light", "moderate", "active", "very_active"]),
   goal: z.enum(["weight_loss", "maintenance", "weight_gain", "muscle_building"]),
+  redirectTo: z.string().optional().default(""),
 });
 
 export type ProfileActionState = {
-  status: "idle" | "error";
+  status: "idle" | "error" | "success";
   message?: string;
 };
 
@@ -91,6 +92,13 @@ function normalizeMetricInputs(payload: z.infer<typeof profileSchema>) {
   } as const;
 }
 
+function sanitizeNextPath(candidate: string) {
+  if (!candidate) return "/onboarding/preferences";
+  if (!candidate.startsWith("/")) return "/onboarding/preferences";
+  if (candidate.startsWith("//")) return "/onboarding/preferences";
+  return candidate;
+}
+
 export async function saveProfile(
   previous: ProfileActionState = defaultState,
   formData: FormData,
@@ -118,6 +126,7 @@ export async function saveProfile(
       sex: formData.get("sex"),
       activityLevel: formData.get("activityLevel"),
       goal: formData.get("goal"),
+      redirectTo: formData.get("redirectTo"),
     });
 
     if (!parsed.success) {
@@ -169,7 +178,8 @@ export async function saveProfile(
       return { status: "error", message: error.message };
     }
 
-    redirect("/onboarding/preferences");
+    const nextPath = sanitizeNextPath(payload.redirectTo);
+    redirect(nextPath);
   } catch {
     return {
       status: "error",
