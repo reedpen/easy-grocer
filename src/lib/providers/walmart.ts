@@ -22,6 +22,7 @@ type SerpApiWalmartResponse = {
 
 const SERP_API_ENDPOINT = "https://serpapi.com/search.json";
 const REQUEST_TIMEOUT_MS = 8000;
+const RESOLUTION_CONCURRENCY = 4;
 
 function parsePriceToCents(value?: number | string | null) {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -101,41 +102,70 @@ function buildWalmartCartUrl(items: GroceryLineItem[]) {
   return `https://www.walmart.com/cart/addToCart?items=${encodeURIComponent(cartItems.join(","))}`;
 }
 
+async function mapWithConcurrency<TInput, TOutput>(
+  input: TInput[],
+  concurrency: number,
+  mapper: (item: TInput) => Promise<TOutput>,
+) {
+  const output = new Array<TOutput>(input.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (true) {
+      const index = cursor;
+      cursor += 1;
+      if (index >= input.length) {
+        return;
+      }
+      output[index] = await mapper(input[index]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(Math.max(concurrency, 1), input.length) }, () =>
+      worker(),
+    ),
+  );
+
+  return output;
+}
+
 export class WalmartProvider implements GroceryProvider {
   readonly id = "walmart" as const;
 
   async buildList(input: GroceryProviderInput): Promise<GroceryProviderResult> {
     const baseItems = aggregateIngredientsFromWeekPlan(input.plan);
-    const resolvedItems: GroceryLineItem[] = [];
+    const resolvedItems = await mapWithConcurrency(
+      baseItems,
+      RESOLUTION_CONCURRENCY,
+      async (item) => {
+        const key = makeIngredientCacheKey(item.ingredient_name, item.unit);
+        let resolved = await fetchCachedProduct(input.userId, this.id, key);
 
-    for (const item of baseItems) {
-      const key = makeIngredientCacheKey(item.ingredient_name, item.unit);
-      let resolved = await fetchCachedProduct(input.userId, this.id, key);
-
-      if (!resolved) {
-        const fresh = await resolveWalmartProduct(item.ingredient_name);
-        if (fresh) {
-          await upsertCachedProduct(input.userId, this.id, key, fresh, fresh.raw_json);
-          resolved = fresh;
+        if (!resolved) {
+          const fresh = await resolveWalmartProduct(item.ingredient_name);
+          if (fresh) {
+            await upsertCachedProduct(input.userId, this.id, key, fresh, fresh.raw_json);
+            resolved = fresh;
+          }
         }
-      }
 
-      if (!resolved) {
-        resolvedItems.push({
-          ...item,
-          source: "estimate",
-        });
-        continue;
-      }
+        if (!resolved) {
+          return {
+            ...item,
+            source: "estimate" as const,
+          };
+        }
 
-      resolvedItems.push({
-        ...withResolvedPrice(item, resolved.unit_price_cents),
-        provider_product_id: resolved.provider_product_id,
-        provider_product_url: resolved.provider_product_url,
-        resolution_confidence: resolved.resolution_confidence,
-        source: "catalog",
-      });
-    }
+        return {
+          ...withResolvedPrice(item, resolved.unit_price_cents),
+          provider_product_id: resolved.provider_product_id,
+          provider_product_url: resolved.provider_product_url,
+          resolution_confidence: resolved.resolution_confidence,
+          source: "catalog" as const,
+        };
+      },
+    );
 
     const estimatedTotalCents = resolvedItems.reduce(
       (sum, item) => sum + item.line_total_cents,
