@@ -3,7 +3,7 @@
 Easy Grocer is a personal-first progressive web app for meal planning and
 Walmart cart handoff.
 
-This repository currently includes Phase 0 scaffolding:
+This repository currently includes:
 
 - Next.js 16 (App Router, TypeScript, Tailwind)
 - Supabase SSR client wiring with `proxy.ts` token refresh flow
@@ -11,6 +11,9 @@ This repository currently includes Phase 0 scaffolding:
 - Offline fallback route at `/~offline`
 - Phase 1 auth/profile foundation (`/login`, `/onboarding/profile`, `/dashboard`)
 - Phase 2 preferences persistence (`/onboarding/preferences`)
+- Phase 3 meal planning persistence + history (`/plan/[weekStart]`, `/history`)
+- Phase 4 grocery provider foundation with Walmart Tier 1 handoff and cached
+  product resolution (`/cart`)
 
 ## Prerequisites
 
@@ -31,6 +34,7 @@ Required values:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_SITE_URL` (defaults to `http://localhost:3000` for local)
 - `SPOONACULAR_API_KEY` (required for live Phase 3 generation; optional fallback to mock data)
+- `SERPAPI_API_KEY` (optional for Phase 4 live Walmart product/price resolution; falls back to estimated costs)
 
 ## Local development
 
@@ -39,11 +43,6 @@ Start development mode:
 ```bash
 npm run dev
 ```
-
-This runs both:
-
-- `serwist build --watch` (service worker rebuilds)
-- `next dev` (web app)
 
 Open [http://localhost:3000](http://localhost:3000).
 
@@ -64,17 +63,16 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Supabase migrations
 
-Apply both migrations in order:
+Apply migrations in order:
 
 1. `supabase/migrations/0001_phase1_profiles.sql`
 2. `supabase/migrations/0002_phase2_preferences.sql`
 3. `supabase/migrations/0003_phase3_meal_plans.sql`
+4. `supabase/migrations/0004_phase3_transactional_persistence.sql`
+5. `supabase/migrations/0005_db_performance_hardening.sql`
+6. `supabase/migrations/0006_phase4_grocery_provider.sql`
 
 ## CI
 
-GitHub Actions CI (`.github/workflows/ci.yml`) runs:
-
-1. `npm ci`
-2. `npm run lint`
-3. `npm run typecheck`
-4. `npm run build`
+GitHub Actions CI (`.github/workflows/ci.yml`) runs quality, security,
+production smoke checks, and migration guard validation.

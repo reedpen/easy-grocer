@@ -1,23 +1,7 @@
-import type { GroceryLineItem } from "@/components/ui/ingredient-list";
 import type { MealPlanItem } from "@/components/ui/meal-card";
+import type { GroceryList, WeekPlan } from "@/lib/planner/types";
 
-export type WeekPlan = {
-  id: string;
-  week_start_date: string;
-  status: "draft" | "confirmed" | "ordered";
-  daily_calorie_target: number;
-  total_cost_cents: number;
-  budget_cents: number;
-  items: MealPlanItem[];
-};
-
-export type GroceryList = {
-  id: string;
-  provider: "walmart";
-  cart_url: string | null;
-  estimated_total_cents: number;
-  items: GroceryLineItem[];
-};
+type MockWeekPlan = WeekPlan & { items: MealPlanItem[] };
 
 function startOfWeekISO() {
   const date = new Date();
@@ -95,7 +79,7 @@ const baseItems: MealPlanItem[] = [
 export function getMockWeekPlan(
   weekStart = startOfWeekISO(),
   budgetCents = 12000,
-): WeekPlan {
+): MockWeekPlan {
   return {
     id: "week-plan-1",
     week_start_date: weekStart,
@@ -113,6 +97,9 @@ export function getMockGroceryList(): GroceryList {
     provider: "walmart",
     cart_url: null,
     estimated_total_cents: 10400,
+    budget_cents: 12000,
+    budget_delta_cents: -1600,
+    budget_status: "under",
     items: [
       {
         id: "g1",
@@ -122,6 +109,7 @@ export function getMockGroceryList(): GroceryList {
         unit_price_cents: 999,
         line_total_cents: 1998,
         category: "Protein",
+        source: "estimate",
       },
       {
         id: "g2",
@@ -131,6 +119,7 @@ export function getMockGroceryList(): GroceryList {
         unit_price_cents: 14,
         line_total_cents: 448,
         category: "Dairy",
+        source: "estimate",
       },
       {
         id: "g3",
@@ -140,6 +129,7 @@ export function getMockGroceryList(): GroceryList {
         unit_price_cents: 249,
         line_total_cents: 996,
         category: "Produce",
+        source: "estimate",
       },
       {
         id: "g4",
@@ -149,6 +139,7 @@ export function getMockGroceryList(): GroceryList {
         unit_price_cents: 549,
         line_total_cents: 1647,
         category: "Protein",
+        source: "estimate",
       },
       {
         id: "g5",
@@ -158,6 +149,7 @@ export function getMockGroceryList(): GroceryList {
         unit_price_cents: 399,
         line_total_cents: 798,
         category: "Pantry",
+        source: "estimate",
       },
     ],
   };

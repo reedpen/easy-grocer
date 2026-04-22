@@ -25,3 +25,11 @@ export function getSupabaseEnv() {
     ),
   };
 }
+
+export function hasSerpApiKey() {
+  return Boolean(process.env.SERPAPI_API_KEY);
+}
+
+export function getSerpApiKey() {
+  return process.env.SERPAPI_API_KEY ?? null;
+}

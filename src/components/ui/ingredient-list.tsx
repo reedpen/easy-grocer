@@ -1,12 +1,4 @@
-export type GroceryLineItem = {
-  id: string;
-  ingredient_name: string;
-  quantity: number;
-  unit: string;
-  unit_price_cents: number;
-  line_total_cents: number;
-  category: string;
-};
+import type { GroceryLineItem } from "@/lib/planner/types";
 
 function asCurrency(cents: number) {
   return new Intl.NumberFormat("en-US", {

@@ -5,11 +5,8 @@ import { ErrorState } from "@/components/ui/error-state";
 import { IngredientList } from "@/components/ui/ingredient-list";
 import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import { requireUser } from "@/lib/auth/guards";
+import { getOrCreateGroceryList } from "@/lib/grocery/service";
 import { getCurrentWeekLabel, getMockGroceryList, getMockWeekPlan } from "@/lib/mock-data";
-import {
-  buildGroceryItemsFromWeekPlan,
-  buildWalmartCartUrlFromWeekPlan,
-} from "@/lib/planner/service";
 import { fetchMostRecentWeekPlan } from "@/lib/planner/store";
 import { WalmartHandoffButton } from "./walmart-handoff-button";
 
@@ -32,15 +29,7 @@ export default async function CartPage() {
   try {
     const latestPlan = await fetchMostRecentWeekPlan(user.id);
     weekPlan = latestPlan ?? getMockWeekPlan();
-    groceryList = latestPlan
-      ? {
-          id: `grocery-${latestPlan.id}`,
-          provider: "walmart" as const,
-          cart_url: buildWalmartCartUrlFromWeekPlan(latestPlan),
-          estimated_total_cents: latestPlan.total_cost_cents,
-          items: buildGroceryItemsFromWeekPlan(latestPlan),
-        }
-      : getMockGroceryList();
+    groceryList = latestPlan ? await getOrCreateGroceryList(user.id, latestPlan) : getMockGroceryList();
   } catch {
     loadError = "Unable to load grocery list right now. Please try again in a moment.";
   }
@@ -53,7 +42,7 @@ export default async function CartPage() {
     );
   }
 
-  const budgetDelta = groceryList.estimated_total_cents - weekPlan.budget_cents;
+  const budgetDelta = groceryList.budget_delta_cents;
 
   return (
     <AppShell currentPath="/cart" weekLabel={getCurrentWeekLabel()}>
