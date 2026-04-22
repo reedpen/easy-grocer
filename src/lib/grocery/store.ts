@@ -112,7 +112,6 @@ export async function persistGroceryListForPlan(
       budget_cents: plan.budget_cents,
       budget_delta_cents: budgetDeltaCents,
       budget_status: budgetStatus,
-      updated_at: new Date().toISOString(),
     })
     .select("id")
     .single();
@@ -134,6 +133,7 @@ export async function persistGroceryListForPlan(
     const { error: insertError } = await supabase.from("grocery_list_items").insert(
       items.map((item) => ({
         grocery_list_id: groceryListId,
+        user_id: userId,
         ingredient_name: item.ingredient_name,
         quantity: item.quantity,
         unit: item.unit,
