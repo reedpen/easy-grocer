@@ -71,6 +71,7 @@ Apply migrations in order:
 4. `supabase/migrations/0004_phase3_transactional_persistence.sql`
 5. `supabase/migrations/0005_db_performance_hardening.sql`
 6. `supabase/migrations/0006_phase4_grocery_provider.sql`
+7. `supabase/migrations/0007_profile_unit_preferences.sql`
 
 ## CI
 

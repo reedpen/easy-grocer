@@ -10,6 +10,10 @@ import {
   type Goal,
   type BiologicalSex,
 } from "@/lib/nutrition/tdee";
+import {
+  type HeightUnit,
+  type WeightUnit,
+} from "@/lib/nutrition/units";
 import { createClient } from "@/lib/supabase/server";
 
 const profileSchema = z.object({
@@ -146,6 +150,8 @@ export async function saveProfile(
       user_id: user.id,
       height_cm: normalized.heightCm,
       weight_kg: normalized.weightKg,
+      preferred_height_unit: payload.heightUnit as HeightUnit,
+      preferred_weight_unit: payload.weightUnit as WeightUnit,
       age: payload.age,
       sex: payload.sex,
       activity_level: payload.activityLevel,

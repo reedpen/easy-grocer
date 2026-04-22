@@ -7,12 +7,17 @@ import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import { StatusChip } from "@/components/ui/status-chip";
 import { requireUser } from "@/lib/auth/guards";
 import { getCurrentWeekLabel, getCurrentWeekStart, getMockWeekPlan } from "@/lib/mock-data";
+import { formatHeight, formatWeight, type HeightUnit, type WeightUnit } from "@/lib/nutrition/units";
 import { fetchWeekPlan } from "@/lib/planner/store";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 type DashboardProfile = {
+  height_cm: number;
+  weight_kg: number;
+  preferred_height_unit: HeightUnit;
+  preferred_weight_unit: WeightUnit;
   daily_calorie_target: number;
   protein_g: number;
   carbs_g: number;
@@ -33,7 +38,7 @@ export default async function DashboardPage() {
   const { data: loadedProfile, error: profileError } = await supabase
     .from("profiles")
     .select(
-      "daily_calorie_target,protein_g,carbs_g,fats_g,goal,activity_level,updated_at",
+      "height_cm,weight_kg,preferred_height_unit,preferred_weight_unit,daily_calorie_target,protein_g,carbs_g,fats_g,goal,activity_level,updated_at",
     )
     .eq("user_id", user.id)
     .maybeSingle();
@@ -128,6 +133,18 @@ export default async function DashboardPage() {
           <div>
             <dt className="text-text-secondary">Goal</dt>
             <dd className="font-medium">{profile.goal.replaceAll("_", " ")}</dd>
+          </div>
+          <div>
+            <dt className="text-text-secondary">Height</dt>
+            <dd className="font-medium">
+              {formatHeight(profile.height_cm, profile.preferred_height_unit)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-text-secondary">Weight</dt>
+            <dd className="font-medium">
+              {formatWeight(profile.weight_kg, profile.preferred_weight_unit)}
+            </dd>
           </div>
           <div>
             <dt className="text-text-secondary">Activity level</dt>
