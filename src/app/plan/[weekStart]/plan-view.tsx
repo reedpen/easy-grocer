@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { MealCard } from "@/components/ui/meal-card";
 import { PrimaryActionButton } from "@/components/ui/primary-action-button";
 import { StatusChip } from "@/components/ui/status-chip";
 import type { WeekPlan } from "@/lib/planner/types";
+import { applyPlanTweakAction } from "./actions";
 
 const dayLabels = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const browser = globalThis as { confirm?: (message?: string) => boolean };
@@ -25,10 +26,13 @@ type PlanViewProps = {
 export function PlanView({ weekPlan, readOnly = false }: PlanViewProps) {
   const [items, setItems] = useState(weekPlan.items);
   const [locked, setLocked] = useState(weekPlan.status !== "draft" || readOnly);
-  const [status, setStatus] = useState(readOnly ? "confirmed" : weekPlan.status);
+  const [status, setStatus] = useState(weekPlan.status);
   const [flash, setFlash] = useState<string | null>(null);
+  const [flashTone, setFlashTone] = useState<"success" | "error">("success");
+  const [isPending, startTransition] = useTransition();
 
-  function pushFlash(message: string) {
+  function pushFlash(message: string, tone: "success" | "error" = "success") {
+    setFlashTone(tone);
     setFlash(message);
     setTimeout(() => setFlash(null), 1800);
   }
@@ -44,43 +48,54 @@ export function PlanView({ weekPlan, readOnly = false }: PlanViewProps) {
     [items],
   );
 
+  function runTweak(
+    tweak:
+      | { type: "remove_meal"; mealId: string }
+      | { type: "replace_meal"; mealId: string }
+      | { type: "add_tweak"; dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6; preset: "protein_bar" | "sweet_treat" }
+      | { type: "confirm_plan" },
+    successMessage: string,
+  ) {
+    startTransition(async () => {
+      const result = await applyPlanTweakAction({
+        weekStart: weekPlan.week_start_date,
+        tweak,
+      });
+
+      if (!result.ok) {
+        pushFlash(result.message, "error");
+        return;
+      }
+
+      setItems(result.weekPlan.items);
+      setStatus(result.weekPlan.status);
+      setLocked(result.weekPlan.status !== "draft" || readOnly);
+      pushFlash(successMessage, "success");
+    });
+  }
+
   function removeMeal(id: string) {
     if (!browser.confirm?.("Remove this meal from the current week plan?")) return;
-    setItems((previous) => previous.filter((item) => item.id !== id));
-    pushFlash("Meal removed.");
+    runTweak({ type: "remove_meal", mealId: id }, "Meal removed.");
   }
 
   function replaceMeal(id: string) {
-    setItems((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? { ...item, title: `${item.title} (alternate)`, calories: Math.max(200, item.calories - 40) }
-          : item,
-      ),
-    );
-    pushFlash("Meal replaced.");
+    runTweak({ type: "replace_meal", mealId: id }, "Meal replaced.");
   }
 
-  function addSnack(dayOfWeek: number) {
-    setItems((previous) => [
-      ...previous,
-      {
-        id: crypto.randomUUID(),
-        day_of_week: dayOfWeek as 0 | 1 | 2 | 3 | 4 | 5 | 6,
-        meal_type: "snack",
-        title: "Protein snack pack",
-        servings: 1,
-        calories: 230,
-        macros: { protein_g: 18, carbs_g: 16, fats_g: 10 },
-      },
-    ]);
-    pushFlash("Snack added.");
+  function addTweak(
+    dayOfWeek: 0 | 1 | 2 | 3 | 4 | 5 | 6,
+    preset: "protein_bar" | "sweet_treat",
+  ) {
+    const label = preset === "protein_bar" ? "Protein bar added." : "Sweet treat added.";
+    runTweak({ type: "add_tweak", dayOfWeek, preset }, label);
   }
 
   function confirmPlan() {
-    setLocked(true);
-    setStatus("confirmed");
-    pushFlash("Plan confirmed. Editing is now locked.");
+    runTweak(
+      { type: "confirm_plan" },
+      "Plan confirmed. Editing is now locked.",
+    );
   }
 
   return (
@@ -98,7 +113,11 @@ export function PlanView({ weekPlan, readOnly = false }: PlanViewProps) {
           </div>
           <div className="flex items-center gap-2">
             <StatusChip status={status} />
-            <PrimaryActionButton type="button" onClick={confirmPlan} disabled={locked}>
+            <PrimaryActionButton
+              type="button"
+              onClick={confirmPlan}
+              disabled={locked || isPending}
+            >
               Confirm plan
             </PrimaryActionButton>
           </div>
@@ -108,7 +127,14 @@ export function PlanView({ weekPlan, readOnly = false }: PlanViewProps) {
             Snapshot mode is read-only for historical plans.
           </p>
         ) : null}
-        {flash ? <p className="mt-3 text-sm text-success">{flash}</p> : null}
+        {flash ? (
+          <p className={`mt-3 text-sm ${flashTone === "error" ? "text-danger" : "text-success"}`}>
+            {flash}
+          </p>
+        ) : null}
+        {isPending ? (
+          <p className="mt-2 text-xs text-text-secondary">Saving plan updates...</p>
+        ) : null}
       </header>
 
       <section className="grid gap-4 xl:grid-cols-2">
@@ -122,7 +148,25 @@ export function PlanView({ weekPlan, readOnly = false }: PlanViewProps) {
             <article key={dayLabels[dayIndex]} className="space-y-3">
               <header className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{dayLabels[dayIndex]}</h2>
-                <p className="text-sm text-text-secondary">{dayItems.length} meals</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm text-text-secondary">{dayItems.length} meals</p>
+                  <PrimaryActionButton
+                    type="button"
+                    variant="ghost"
+                    onClick={() => addTweak(dayIndex as 0 | 1 | 2 | 3 | 4 | 5 | 6, "protein_bar")}
+                    disabled={locked || isPending}
+                  >
+                    + Protein bar
+                  </PrimaryActionButton>
+                  <PrimaryActionButton
+                    type="button"
+                    variant="ghost"
+                    onClick={() => addTweak(dayIndex as 0 | 1 | 2 | 3 | 4 | 5 | 6, "sweet_treat")}
+                    disabled={locked || isPending}
+                  >
+                    + Sweet treat
+                  </PrimaryActionButton>
+                </div>
               </header>
               {dayItems.length > 0 ? (
                 dayItems.map((item) => (
@@ -131,8 +175,8 @@ export function PlanView({ weekPlan, readOnly = false }: PlanViewProps) {
                     item={item}
                     onRemove={removeMeal}
                     onReplace={replaceMeal}
-                    onAddSnack={addSnack}
                     locked={locked}
+                    pending={isPending}
                   />
                 ))
               ) : (

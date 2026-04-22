@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { getCurrentWeekLabel, getMockHistory } from "@/lib/mock-data";
 import type { HistoryItem } from "@/lib/planner/types";
 import { fetchPlanHistory } from "@/lib/planner/store";
+import { replanFromHistoryAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +18,24 @@ function asCurrency(cents: number) {
   }).format(cents / 100);
 }
 
-export default async function HistoryPage() {
+type HistoryPageProps = {
+  searchParams: Promise<{ error?: string }>;
+};
+
+function getErrorMessage(code: string | undefined) {
+  if (code === "invalid_source_week") {
+    return "Could not reuse that historical week because its date was invalid.";
+  }
+  if (code === "replan_failed") {
+    return "Could not build a new plan from that history entry. Please try again.";
+  }
+  return null;
+}
+
+export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const user = await requireUser();
+  const query = await searchParams;
+  const actionError = getErrorMessage(query.error);
   let loadError: string | null = null;
   let history: HistoryItem[] = getMockHistory();
 
@@ -46,6 +63,7 @@ export default async function HistoryPage() {
             Browse prior plan snapshots and weekly spending outcomes.
           </p>
         </header>
+        {actionError ? <ErrorState message={actionError} /> : null}
 
         <ul className="space-y-3">
           {history.map((item) => (
@@ -73,6 +91,15 @@ export default async function HistoryPage() {
               >
                 View snapshot
               </Link>
+              <form action={replanFromHistoryAction} className="mt-3">
+                <input type="hidden" name="sourceWeekStart" value={item.week_start_date} />
+                <button
+                  type="submit"
+                  className="inline-flex min-h-11 items-center rounded-[10px] border border-border bg-surface px-4 text-sm font-semibold hover:bg-surface-strong"
+                >
+                  Use for this week
+                </button>
+              </form>
             </li>
           ))}
         </ul>
