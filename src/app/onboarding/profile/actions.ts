@@ -171,7 +171,6 @@ export async function saveProfile(
       protein_g: targets.proteinGrams,
       carbs_g: targets.carbsGrams,
       fats_g: targets.fatsGrams,
-      updated_at: new Date().toISOString(),
     });
 
     if (error) {

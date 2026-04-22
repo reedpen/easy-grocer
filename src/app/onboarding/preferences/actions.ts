@@ -114,7 +114,6 @@ export async function savePreferences(
 
     const data = parsed.data;
     const supabase = await createClient();
-    const now = new Date().toISOString();
     const weeklyBudgetCents = Math.round(data.weeklyBudget * 100);
     const normalizedSnacksPerDay = data.includeSnacks
       ? Math.min(data.snacksPerDay, 3)
@@ -132,7 +131,6 @@ export async function savePreferences(
         meals_per_day: data.mealsPerDay,
         include_snacks: data.includeSnacks,
         snacks_per_day: normalizedSnacksPerDay,
-        updated_at: now,
       });
 
     if (preferencesError) {
@@ -150,7 +148,6 @@ export async function savePreferences(
         active_days: [],
         window_start_time: start,
         window_end_time: end,
-        updated_at: now,
       });
 
     if (fastingError) {
