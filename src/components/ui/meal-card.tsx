@@ -20,16 +20,16 @@ type MealCardProps = {
   item: MealPlanItem;
   onRemove: (id: string) => void;
   onReplace: (id: string) => void;
-  onAddSnack: (dayOfWeek: MealPlanItem["day_of_week"]) => void;
   locked?: boolean;
+  pending?: boolean;
 };
 
 export function MealCard({
   item,
   onRemove,
   onReplace,
-  onAddSnack,
   locked = false,
+  pending = false,
 }: MealCardProps) {
   return (
     <article className="eg-card p-4">
@@ -52,7 +52,7 @@ export function MealCard({
           type="button"
           variant="secondary"
           onClick={() => onRemove(item.id)}
-          disabled={locked}
+          disabled={locked || pending}
         >
           Remove
         </PrimaryActionButton>
@@ -60,17 +60,9 @@ export function MealCard({
           type="button"
           variant="secondary"
           onClick={() => onReplace(item.id)}
-          disabled={locked}
+          disabled={locked || pending}
         >
           Replace
-        </PrimaryActionButton>
-        <PrimaryActionButton
-          type="button"
-          variant="ghost"
-          onClick={() => onAddSnack(item.day_of_week)}
-          disabled={locked}
-        >
-          Add snack
         </PrimaryActionButton>
       </div>
     </article>
